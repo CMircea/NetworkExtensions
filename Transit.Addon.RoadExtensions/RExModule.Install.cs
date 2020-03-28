@@ -66,34 +66,32 @@ namespace Transit.Addon.RoadExtensions
         {
             _container = new GameObject(REX_OBJECT_NAME);
 
-            var tinyZoneBlockCreators = new[]
-            {
-                Alley2LBuilder.NAME,
-                Oneway1LBuilder.NAME,
-                Oneway1LParkingBuilder.NAME,
-                Oneway1LBicycleBuilder.NAME,
-                ZonablePedestrianTinyGravelRoadBuilder.NAME,
-                ZonablePedestrianTinyPavedRoadBuilder.NAME,
-                ZonablePedestrianTinyStoneRoadBuilder.NAME,
-                ZonablePedestrianTinyBoardwalkBuilder.NAME
-            };
-
-            foreach (var name in tinyZoneBlockCreators)
-            {
-                RoadZoneBlocksCreationManager.RegisterCustomCreator<TinyRoadZoneBlocksCreator>(name);
-                RoadSnappingModeManager.RegisterCustomSnapping<TinyRoadSnappingMode>(name);
-            }
-
             _menuInstaller = _container.AddInstallerComponent<MenuInstaller>();
             _menuInstaller.Host = this;
 
             _roadsInstaller = _container.AddInstallerComponent<RoadsInstaller>();
             _roadsInstaller.Host = this;
         }
-		
+
         public override void OnLevelLoaded(LoadMode mode)
         {
             base.OnLevelLoaded(mode);
+
+            var networks = Resources.FindObjectsOfTypeAll<NetInfo>();
+            var tinyRoads = from network in networks
+                            where network.m_halfWidth < 5
+                            where network.m_placementStyle == ItemClass.Placement.Manual
+                            where network.m_laneTypes.HasFlag(NetInfo.LaneType.Vehicle)
+                            where network.m_vehicleTypes.HasFlag(VehicleInfo.VehicleType.Car)
+                            where network.m_lanes.Any(lane => lane.m_vehicleType == VehicleInfo.VehicleType.Car)
+                            orderby network.name
+                            select network;
+
+            foreach (var network in tinyRoads)
+            {
+                RoadZoneBlocksCreationManager.RegisterCustomCreator<TinyRoadZoneBlocksCreator>(network.name);
+                RoadSnappingModeManager.RegisterCustomSnapping<TinyRoadSnappingMode>(network.name);
+            }
 
             if (_lateOperations != null)
             {
